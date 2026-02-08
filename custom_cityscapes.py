@@ -19,13 +19,12 @@ class CityscapesLables:
 
             # Adicionando valores as listas de nomes e cores
             if c.train_id != -1 and c.train_id != 255:
-                id_names[c.id] = c.name
+                id_names[c.train_id] = c.name
                 color_list.append(c.color)
 
         # Variavel para dicionario de nomes
-        train_names_dict = {i: id_names[c.id] for i, c in enumerate(datasets.Cityscapes.classes) if c.train_id != -1 and c.train_id != 255}
-        train_names_dict[-1] = 'ignore' # Adiciona a classe 'ignore' com train_id -1
-        self.train_names_dict = train_names_dict
+        id_names.update({19: 'ignore'}) # Adiciona a classe 'ignore' com train_id -1
+        self.id_names = id_names
 
         # Variavel para lista de cores
         train_colors_list = color_list
