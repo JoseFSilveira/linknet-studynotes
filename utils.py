@@ -11,7 +11,7 @@ def img_show(imgs: list[torch.Tensor], smnts: list[torch.Tensor], n: int=5, cmap
         plt.imshow(imgs[i].permute(1,2,0)) # permute para mudar a ordem dos canais e converter um tensor para imagem
         plt.axis('off')
         plt.subplot(n, 2, 2*i+2)
-        plt.imshow(smnts[i].squeeze(dim=0), cmap=cmap)
+        plt.imshow(smnts[i], cmap=cmap)
         plt.axis('off')
 
 def dataset_show(dataset, n:int = 5, cmap: mcolors.LinearSegmentedColormap = None) -> None:

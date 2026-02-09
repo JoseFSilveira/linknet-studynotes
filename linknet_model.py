@@ -54,6 +54,8 @@ class LinkNet(nn.Module):
     def __init__(self, in_channels: int, out_channels: int):
         super().__init__()
 
+        self.dummy_param = nn.Parameter(torch.empty(size=(0,))) # para tirar informacao de device do modelo
+
         self.initial_block = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3),
             nn.BatchNorm2d(64),

@@ -52,7 +52,7 @@ class Transforms:
             v2.Resize(size=conv_size, interpolation=InterpolationMode.NEAREST_EXACT), # redimensiona imagem para 256x512. Nearest Neighbor para nao criar novos valores
             v2.PILToTensor(), # converte segmentação PIL para tensor
             IdToTrainIdTransform(lable_conversion), # converte ids originais para ids de treino
-            #v2.Lambda(mask_squeeze), # remove canal extra desnecessário na segmentação
+            v2.Lambda(mask_squeeze), # remove canal extra desnecessário na segmentação
             v2.ToDtype(torch.uint8) # apenas converte para inteiro sem normalizacao
         ])
 
