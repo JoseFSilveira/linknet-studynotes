@@ -1,7 +1,7 @@
 import torch
 from torchvision import datasets
 from torchvision.transforms import v2
-from torchvision import tv_tensors  # <--- Importação necessária pára Augmentations
+from torchvision import tv_tensors  # <--- Importação necessária paara Augmentations
 import matplotlib.colors as mcolors
 
 
@@ -15,7 +15,7 @@ class CityscapesLables:
         for c in datasets.Cityscapes.classes:
 
             # Adicionando valores ao dicionario de conversao de ids
-            lable_conversion[c.id] = c.train_id if c.train_id != 255 else 19 # Mapeia a classe 'ignore' (train_id 255) para 19, que é o índice da última classe treinavel
+            lable_conversion[c.id] = c.train_id if c.train_id != 255 else 19 # Mapeia a classe 'ignore' (train_id 255) para 19, que é o índice da ultima classe treinavel
 
             # Adicionando valores as listas de nomes e cores
             if c.train_id != -1 and c.train_id != 255:

@@ -6,7 +6,6 @@ from torch import optim
 # Mais informacoes em https://lightning.ai/docs/torchmetrics/stable/classification/jaccard_index.html#torchmetrics.classification.MulticlassJaccardIndex
 from torchmetrics.classification import MulticlassJaccardIndex # Jaccard Index eh a mesma coisa que IoU (Intersection over Union) e esse opjeto pode calcular tambem iIoU
 from tqdm.auto import tqdm
-import numpy as np
 from pathlib import Path
 
 NUM_CLASSES = 20 # Numero de classes do dataset, incluindo a classe de ignorar (void)
@@ -46,15 +45,35 @@ class TrainLinkNet:
     # ------------------------- #
     # -- SAVE MODEL FUNCTION -- #
     # ------------------------- #
-    def save_model(self, name: str ="best_model.pth") -> None:
+    def save_model(self, name: str ="best_model", save_results: bool=False) -> None:
 
         # Criando Caminho para Salvar Modelo
-        MODEL_NAME = name
+        MODEL_NAME = name + ".pth"
         MODEL_SAVE_PATH = self.MODEL_PATH / MODEL_NAME
 
         # Salvando o modelo
         torch.save(obj=self.model.state_dict(), f=MODEL_SAVE_PATH) # Salva apenas os parametros do modelo (state_dict)
 
+        # Salvvando os resultados do treino, caso necesssario
+        if save_results:
+            RESULTS_NAME = name + "_results.pt"
+            RESULTS_SAVE_PATH = self.MODEL_PATH / RESULTS_NAME
+            torch.save(obj=self.results, f=RESULTS_SAVE_PATH) # Salva o dicionario de resultados do treino
+
+
+    def load_best_iIoU(self, model_name="best_model") -> dict:
+
+        # Carrega o melhor IoU para metricas de validacao do melhor modelo
+        SAVED_MODEL_PATH = self.MODEL_PATH / Path(model_name + ".pth")
+        if SAVED_MODEL_PATH.is_file():
+            with open(self.MODEL_PATH / Path(model_name + "_results.pt"), "rb") as f:
+                best_model_results = torch.load(f)
+                best_iIoU = best_model_results['val_iIoU'][-1] if len(best_model_results['val_iIoU']) > 0 else 0
+        else:
+            best_iIoU = 0
+    
+        return best_iIoU
+    
 
     # ------------------------- #
     # -- TRAIN STEP FUNCTION -- #
@@ -116,7 +135,11 @@ class TrainLinkNet:
                     val_dataloader: torch.utils.data.DataLoader) -> None:
 
         # Cria variaveis para salvar melhor iIoU e em qual epoch foi atingido
-        best_iIoU, best_epoch = 0, 0
+        best_iIoU = self.load_best_iIoU() # Carrega o melhor iIoU registrado, caso exista, para comparar com os resultados do treino atual
+        best_epoch = 0
+
+        # Variavel auxiliar para saber se o treino atual registrou um modelo melhor que o anteriormente salvo, caso ele exista.
+        model_improved = False
 
         for epoch in range(self.epochs):
             print(f"EPOCH {epoch+1}/{self.epochs}")
@@ -131,13 +154,7 @@ class TrainLinkNet:
                     #f"val_IoU: {val_IoU:.4f} | "
                     f"val_iIoU: {val_iIoU:.4f}\n")
 
-            # Armazena o modelo caso a iIoU for a maior registrada
-            if val_iIoU > best_iIoU:
-                best_iIoU = val_iIoU
-                best_epoch = epoch
-                self.save_model()
-
-            # Passando os dados a cpu e os convertendo para float, caso necessario
+            # Anexando os resultados do treino e validacao para o dicionario de resultados
             self.results['train_loss'].append(train_loss)
             self.results['train_IoU'].append(train_IoU)
             self.results['train_iIoU'].append(train_iIoU)
@@ -145,7 +162,18 @@ class TrainLinkNet:
             self.results['val_IoU'].append(val_IoU)
             self.results['val_iIoU'].append(val_iIoU)
 
+            # Armazena o modelo caso a iIoU for a maior registrada
+            if val_iIoU > best_iIoU:
+                model_improved = True
+                best_iIoU = val_iIoU
+                best_epoch = epoch
+                self.save_model(save_results=True) # Salva o modelo e os resultados do treino, caso a iIoU seja a melhor registrada
+
         # Sinaliza fim do Treino
-        print("Treino do modelo foi finalizado!\n"
-              f"O modelo com melhor iIoU foi registrado no Epoch {best_epoch}.\n"
-              f"Esse modelo foi salvo no caminho {self.MODEL_PATH}")
+        if model_improved:
+            print("Treino do modelo foi finalizado!\n"
+                f"O modelo com melhor iIoU foi registrado no Epoch {best_epoch}.\n"
+                f"Esse modelo foi salvo no caminho {self.MODEL_PATH}")
+        else:
+            print("Treino do modelo foi finalizado!\n"
+                  "Nao foi registrado modelo com melhores resultados que o anteriromente salvo.")
