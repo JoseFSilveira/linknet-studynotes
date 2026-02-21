@@ -3,6 +3,40 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import random
 from pathlib import Path
+# Mais informacoes em https://lightning.ai/docs/torchmetrics/stable/classification/jaccard_index.html#torchmetrics.classification.MulticlassJaccardIndex
+from torchmetrics.classification import MulticlassJaccardIndex
+
+from train_model import NUM_CLASSES
+
+def print_results(model_results: dict) -> None:
+
+    if model_results is not None:
+        
+        # Gerar Figuras
+        plt.figure(figsize=(20,10))
+        fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(15,5))
+
+        epochs = range(1, len(model_results['train_loss'])+1)
+        ax[0].scatter(epochs, model_results['train_loss'], label='Train Loss', c='blue')
+        ax[0].scatter(epochs, model_results['val_loss'], label='Val Loss', c='orange')
+        ax[0].set_xlabel('Epoch')
+        ax[0].set_ylabel('Loss')
+        ax[0].legend()
+        ax[0].set_title('Loss Curves')
+
+        IoU_metric = MulticlassJaccardIndex(num_classes=NUM_CLASSES, ignore_index=NUM_CLASSES-1, average='none')
+        IoU_metric.plot(model_results['val_IoU'], ax=ax[1])
+        ax[1].set_title('IoU Curves')
+
+        iIoU_metric = MulticlassJaccardIndex(num_classes=NUM_CLASSES, ignore_index=NUM_CLASSES-1, average='weighted')
+        iIoU_metric.plot(model_results['val_iIoU'], ax=ax[2])
+        ax[2].set_title('iIoU Curve')
+
+        plt.show()
+
+    else:
+        print("Resultados do modelo nao encontrados.")
+
 
 # Imprimindo imagens e segmentações do dataset
 def img_show(imgs: list[torch.Tensor], smnts1: list[torch.Tensor], smnts2: list[torch.Tensor]=None, n: int=5, col_names: list = None, cmap: mcolors.LinearSegmentedColormap = None) -> None:
