@@ -84,7 +84,7 @@ class LinkNet(nn.Module):
         self.decoder2 = LinkNetDecoderBlock(128, 64)
         self.decoder1 = LinkNetDecoderBlock(64, 64)
 
-        self.dropout = nn.Dropout2d(p=0.5)
+        self.dropout = nn.Dropout2d(p=0.2)
 
     def forward(self, x):
 
@@ -93,11 +93,11 @@ class LinkNet(nn.Module):
         e3 = self.encoder3(e2)
 
         '''
-        d4 = torch.add(e3, self.dropout(self.decoder4(self.encoder4(e3))))
-        d3 = torch.add(e2, self.decoder3(d4))
-        d2 = torch.add(e1, self.decoder2(d3))
+        d4 = e3 + self.decoder4(self.dropout(self.encoder4(e3)))
+        d3 = e2 + self.decoder3(d4)
+        d2 = e1 + self.decoder2(d3)
 
         return self.final_block(self.decoder1(d2))
         '''
 
-        return self.final_block(self.decoder1(torch.add(e1, self.decoder2(torch.add(e2, self.decoder3(torch.add(e3, self.dropout(self.decoder4(self.encoder4(e3))))))))))
+        return self.final_block(self.decoder1(e1 + self.decoder2(e2 + self.decoder3(e3 + self.decoder4(self.dropout(self.encoder4(e3)))))))

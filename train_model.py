@@ -12,10 +12,11 @@ NUM_CLASSES = 20 # Numero de classes do dataset, incluindo a classe de ignorar (
 
 class TrainLinkNet:
   
-    def __init__(self, model: torch.nn.Module, device: torch.device, epochs: int = 5) -> None:
+    def __init__(self, model: torch.nn.Module, device: torch.device, epochs: int = 5, init_lr: float = 1e-4) -> None:
         self.model = model
         self.device = device
         self.epochs = epochs
+        self.init_lr = init_lr
 
         # Aloca o modelo para o dispositivo correto, caso necessario
         if self.model.dummy_param.device != self.device:
@@ -23,11 +24,16 @@ class TrainLinkNet:
 
         # Definir loss fuinction e otimizador
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=NUM_CLASSES-1).to(device)
-        self.optim_fn = optim.Adam(model.parameters(), lr=1e-4)
+        self.optim_fn = optim.AdamW(model.parameters(), lr=self.init_lr, weight_decay=1e-2)
+        #self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optim_fn, "max", patience=5, factor=0.5, verbose=True) # reduz learnin rate pela metade se avaalidacao nao melhorar em 5 epochs
+
 
         # Definir metricas
         self.IoU_metric = MulticlassJaccardIndex(num_classes=NUM_CLASSES, ignore_index=NUM_CLASSES-1, average='none').to(self.device)
         self.iIoU_metric = MulticlassJaccardIndex(num_classes=NUM_CLASSES, ignore_index=NUM_CLASSES-1, average='weighted').to(self.device)
+
+        # Criando dicionario para armazenar a evolucao do learning rate
+        self.learning_rates = [self.init_lr] # Armazena o learning rate inicial para analise posterior
 
         # Criando dicionario para armazenar os resultados
         self.results = {"train_loss": [],
@@ -92,6 +98,7 @@ class TrainLinkNet:
             self.optim_fn.zero_grad()
             batch_loss.backward() # Perform backward pass on the current batch's loss
             self.optim_fn.step()
+            self.scheduler.step() # usar com OneCycleLR
 
             y_pred_class = torch.softmax(y_pred, dim=1).argmax(dim=1).squeeze(dim=1) # Converte as probabilidades em classes preditas e remove a dimensão de canal extra
             train_IoU += self.IoU_metric(y_pred_class, y).cpu() # Acumular IoU para cada classe
@@ -141,11 +148,27 @@ class TrainLinkNet:
         # Variavel auxiliar para saber se o treino atual registrou um modelo melhor que o anteriormente salvo, caso ele exista.
         model_improved = False
 
+        # Define o scheduler de learning rate
+        self.scheduler = optim.lr_scheduler.OneCycleLR(
+            self.optim_fn,
+            max_lr=1e-3,                  # O pico da taxa de aprendizado
+            epochs=self.epochs,           # Total de épocas
+            steps_per_epoch=len(train_dataloader), # Quantidade de batches por época
+            pct_start=0.3,                # Gasta 30% do treino subindo o LR, e 70% descendo
+            div_factor=10.0,              # LR inicial sera max_lr / 10 (ou seja, começa em 1e-4)
+            final_div_factor=1000.0       # LR final será muito próximo de zero
+        )
+
         for epoch in range(self.epochs):
             print(f"EPOCH {epoch+1}/{self.epochs}")
 
+            # Rodar um eoch para todas as fracoes do dataloader
             train_loss, train_IoU, train_iIoU = self.train_step(train_dataloader)
             val_loss, val_IoU, val_iIoU = self.val_step(val_dataloader)
+
+            # Atualiza o learning rate do otimizador, caso a iIoU de validacao nao tenha melhorado
+            #self.scheduler.step(val_iIoU) # usar com ReduceLROnPlateau
+
             # Imprimindo o que esta acontecendo
             print(f"train_loss: {train_loss:.4f} | " # Formatted to 4 decimal places for readability
                     #f"train_IoU: {train_IoU:.4f} | "
@@ -153,6 +176,9 @@ class TrainLinkNet:
                     f"val_loss: {val_loss:.4f} | "
                     #f"val_IoU: {val_IoU:.4f} | "
                     f"val_iIoU: {val_iIoU:.4f}\n")
+
+            # Armazenando o learning rate atual para analise posterior
+            self.learning_rates.append(self.scheduler._last_lr[0])
 
             # Anexando os resultados do treino e validacao para o dicionario de resultados
             self.results['train_loss'].append(train_loss)

@@ -8,12 +8,20 @@ from torchmetrics.classification import MulticlassJaccardIndex
 
 from train_model import NUM_CLASSES
 
+def plot_leaning_rate_evolution(learning_rates: list[float]) -> None:
+    plt.figure(figsize=(5, 10))
+    plt.plot(learning_rates)
+    plt.xlabel("Epochs")
+    plt.ylabel("Learning Rate")
+    plt.title("Evolucao do Learning Rate ao longo das Epochs")
+    plt.show()
+
 def print_results(model_results: dict) -> None:
 
     if model_results is not None:
         
         # Gerar Figuras
-        plt.figure(figsize=(20,10))
+        plt.figure(figsize=(5,5))
         fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(15,5))
 
         epochs = range(1, len(model_results['train_loss'])+1)
@@ -21,6 +29,7 @@ def print_results(model_results: dict) -> None:
         ax[0].scatter(epochs, model_results['val_loss'], label='Val Loss', c='orange')
         ax[0].set_xlabel('Epoch')
         ax[0].set_ylabel('Loss')
+        ax[0].grid(True)
         ax[0].legend()
         ax[0].set_title('Loss Curves')
 
