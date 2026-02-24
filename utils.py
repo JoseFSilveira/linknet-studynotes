@@ -149,6 +149,22 @@ def dataset_show(dataset, n:int = 5, predict_masks: bool=False, model: torch.nn.
              n=n,col_names=col_names, cmap=cmap)
 
 
+def load_results(name: str) -> dict | None:
+
+    MODEL_PATH = Path.cwd() / Path("saved_models")
+    RESULTS_NAME = name + "_results.pt"
+    RESULTS_SAVE_PATH = MODEL_PATH / RESULTS_NAME
+    if RESULTS_SAVE_PATH.is_file():
+        with open(RESULTS_SAVE_PATH, "rb") as f:
+            results = torch.load(f, map_location='cpu')
+
+        return results
+    
+    else:
+        print(f"Resultados do modelo {name} nao encontrados.")
+        return None
+
+
 def load_state_dict(model: torch.nn.Module, name: str, load_reults: bool=False, device: torch.device='cpu') -> torch.nn.Module | tuple[torch.nn.Module, dict]:
     
     # Carregando apenas os parametros (state_dict()), pois isso flexibiliza o modelo e evita erros de incompatibilidade com parametros e caminhos do modelo original
@@ -161,16 +177,9 @@ def load_state_dict(model: torch.nn.Module, name: str, load_reults: bool=False, 
     else:
         print(f"Modelo {name} nao encontrado.")
 
-    # Se load_results for True, entao o modelo e carregado e testado, e os resultados sao impressos
+    # Se load_results for True, entao o modelo e carregado e testado, e os resultados sao impressos, caso contrario, apenas o modelo e carregado e retornado
     if load_reults:
-        REULTS_NAME = name + "_results.pt"
-        RESULTS_SAVE_PATH = MODEL_PATH / REULTS_NAME
-        if RESULTS_SAVE_PATH.is_file():
-            with open(RESULTS_SAVE_PATH, "rb") as f:
-                model_results = torch.load(f)
-        else:
-            model_results = None
-            print(f"Resultados do modelo {name} nao encontrados.")
+        model_results = load_results(name)
         return model, model_results
     
     else:

@@ -99,5 +99,8 @@ class LinkNet(nn.Module):
 
         return self.final_block(self.decoder1(d2))
         '''
+        # Sem dropout
+        #return self.final_block(self.decoder1(e1 + self.decoder2(e2 + self.decoder3(e3 + self.decoder4(self.encoder4(e3))))))
 
+        # Com dropout
         return self.final_block(self.decoder1(e1 + self.decoder2(e2 + self.decoder3(e3 + self.decoder4(self.dropout(self.encoder4(e3)))))))

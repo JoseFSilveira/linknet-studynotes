@@ -61,7 +61,7 @@ class Transforms:
 
             # Transformações Geométricas
             v2.RandomHorizontalFlip(p=0.5),
-            v2.RandomVerticalFlip(p=0.1),
+            #v2.RandomVerticalFlip(p=0.1),
             v2.RandomRotation(degrees=15, interpolation=InterpolationMode.BILINEAR, expand=False, center=None, fill={tv_tensors.Image: (0,0,0), tv_tensors.Mask: 19}),
             
             # Transformações Fotométricas (O v2 aplica AUTOMATICAMENTE só na Imagem)
