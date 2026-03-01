@@ -151,6 +151,9 @@ class AugmentedCityscapes(datasets.Cityscapes):
             image, target = self.data_augmentation(tv_tensors.Image(image), tv_tensors.Mask(target))
 
         if self.split == 'train':
-            image = v2.ToDtype(torch.float32, scale=True)(image) # normaliza para [0,1]
-
-        return image, target
+            normalize = v2.Compose([
+                v2.ToDtype(torch.float32, scale=True), # normaliza para [0,1]
+                v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) # Requisito para o backbone ResNet18, conforme mostrado no notebook principal
+            ])
+            
+        return normalize(image), target

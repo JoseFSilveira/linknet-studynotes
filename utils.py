@@ -51,12 +51,17 @@ def print_results(model_results: dict) -> None:
 def img_show(imgs: list[torch.Tensor], smnts1: list[torch.Tensor], smnts2: list[torch.Tensor]=None, n: int=5, col_names: list = None, cmap: mcolors.LinearSegmentedColormap = None) -> None:
 
     '''
-    Essa funcao imprime as imagens e ssegmentacoes do dataset,
+    Essa funcao imprime as imagens e segmentacoes do dataset,
+    Primeiramente desnormaliza as imagens que foram normalizadas para o ResNet18,
     caso smnts2 seja fornecido, entao as segmentacoes de smnts1 e smnts2 sao impressas lado a lado,
     caso contrario, apenas as segmentacoes de smnts1 sao impressas
     '''
 
-    # Definindo Vazriavel auxiliar paraa definir se os titulos das colunas devem er mostrados ou nao, dependendo se col_names foi fornecido e se a quantidade de nomes informados estiver correta
+    # Valores do ImageNet para desnormalizar
+    mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+    std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+
+    # Definindo Variavel auxiliar paraa definir se os titulos das colunas devem er mostrados ou nao, dependendo se col_names foi fornecido e se a quantidade de nomes informados estiver correta
     if col_names is not None:
         if smnts2 is not None and len(col_names) == 3:
             show_col_names = True
@@ -83,7 +88,15 @@ def img_show(imgs: list[torch.Tensor], smnts1: list[torch.Tensor], smnts2: list[
             ax.set_title(col)
 
     for i in range(n):
-        axes[i, 0].imshow(imgs[i].permute(1,2,0)) # permute para mudar a ordem dos canais e converter um tensor para imagem
+        
+        # 1. Desnormaliza a imagem (imagem * std + mean)
+        img_to_show = imgs[i].cpu() * std + mean
+        
+        # 2. Garante que qualquer residuo matematico fique estritamente entre 0 e 1
+        img_to_show = torch.clamp(img_to_show, 0, 1)
+
+        # 3. Imprime a imagem e as segmentações
+        axes[i, 0].imshow(img_to_show.permute(1,2,0)) # permute para mudar a ordem dos canais e converter um tensor para imagem
         axes[i, 0].axis('off')
         axes[i, 1].imshow(smnts1[i], cmap=cmap)
         axes[i, 1].axis('off')

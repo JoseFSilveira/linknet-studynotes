@@ -38,13 +38,15 @@ class Transforms:
         self.train_transform = v2.Compose([
             v2.Resize(size=conv_size, interpolation=InterpolationMode.BILINEAR), # redimensiona imagem para 256x512
             v2.PILToTensor(), # converte imagem PIL para tensor
-            v2.ToDtype(torch.uint8) # apenas converte para inteiro sem normalizacao
+            v2.ToDtype(torch.uint8) # apenas converte para inteiro sem normalizacao. Isso eh feito pois o algumas funcoes do DataAugmentation exigem que a imagem seja do tipo uint8
+            # OBS: o restante da normalizacao (dividir por 255 e normalizar com media e desvio padrao) eh feito APOS a data augmentation
         ])
 
         self.val_transform = v2.Compose([
             v2.Resize(size=conv_size, interpolation=InterpolationMode.BILINEAR), # redimensiona imagem para 256x512
             v2.PILToTensor(),
-            v2.ToDtype(torch.float32, scale=True)
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) # Requisito para o backbone ResNet18, conforme mostrado no notebook principal
         ])
 
         # -- TARGET TRANFROMS -- #
