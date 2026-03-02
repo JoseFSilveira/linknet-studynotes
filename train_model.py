@@ -31,12 +31,12 @@ class TrainLinkNet:
             raise ValueError(f"Scheduler desconhecido: {scheduler_name}. Use algum da lista {valid_scheduler_names}.")
 
         # Definir loss fuinction e otimizador
-        self.loss_fn = loss_fn.to(device)
+        self.loss_fn = loss_fn
         self.optim_fn = optim_fn
 
         # Definir metricas
         self.metric_names = list(metrics.keys()) # Armazena os nomes das metricas para facilitar a impressao dos resultados do treino
-        self.metric_fns = [metric.to(device) for metric in metrics.values()] # Armazena as funcoes de metricas em uma lista, para facilitar o loop de treino, e move as metricas para o dispositivo correto
+        self.metric_fns = [metric for metric in metrics.values()] # Armazena as funcoes de metricas em uma lista, para facilitar o loop de treino, e move as metricas para o dispositivo correto
         self.metric_types = self.test_metric_output() # Testa se as metricas retornam valores unicos ou tensores com mais de um valor, para ajudar na inicializacao do loop de treino
 
         # Definir a metrica a ser monitorada para salvar o melhor modelo
@@ -248,13 +248,13 @@ class TrainLinkNet:
             val_metric_string = ""
             for i, metric_name in enumerate(self.metric_names):
                 if self.metric_types[i] == int: # apenas para metricas que retornam um valor unico, como o iIoU
-                    train_metric_string += f"{metric_name}: {train_metrics[i]:.4f} | " # Formatted to 4 decimal places for readability
-                    val_metric_string += f"{metric_name}: {val_metrics[i]:.4f} | " # Formatted to 4 decimal places for readability
+                    train_metric_string += f"train_{metric_name}: {train_metrics[i]:.4f} | " # Formatted to 4 decimal places for readability
+                    val_metric_string += f"val_{metric_name}: {val_metrics[i]:.4f} | " # Formatted to 4 decimal places for readability
 
             print(f"train_loss: {train_loss:.4f} | " # Formatted to 4 decimal places for readability
-                    f"train_{train_metric_string}"
+                    f"{train_metric_string}"
                     f"val_loss: {val_loss:.4f} | "
-                    f"val_{val_metric_string}\n")
+                    f"{val_metric_string}\n")
 
             # Armazenando o learning rate atual para analise posterior
             self.learning_rates.append(self.scheduler_fn._last_lr[0])
