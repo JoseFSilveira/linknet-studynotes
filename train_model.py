@@ -277,7 +277,7 @@ class TrainLinkNet:
         # Sinaliza fim do Treino
         if model_improved:
             print("Treino do modelo foi finalizado!\n"
-                f"O modelo com melhor {self.metric_to_monitor} foi registrado no Epoch {best_epoch}.\n"
+                f"O modelo com melhor {self.metric_to_monitor} foi registrado no Epoch {best_epoch+1}.\n"
                 f"Esse modelo foi salvo no caminho {self.MODEL_PATH}")
         else:
             print("Treino do modelo foi finalizado!\n"

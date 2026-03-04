@@ -6,6 +6,8 @@ from pathlib import Path
 # Mais informacoes em https://lightning.ai/docs/torchmetrics/stable/classification/jaccard_index.html#torchmetrics.classification.MulticlassJaccardIndex
 from torchmetrics.classification import MulticlassJaccardIndex
 
+import custom_cityscapes as ccs
+
 from train_model import NUM_CLASSES
 
 def plot_leaning_rate_evolution(learning_rates: list[float]) -> None:
@@ -13,6 +15,9 @@ def plot_leaning_rate_evolution(learning_rates: list[float]) -> None:
     plt.plot(learning_rates)
     plt.xlabel("Epochs")
     plt.ylabel("Learning Rate")
+    x_ticks_interval = len(learning_rates) // 10
+    plt.xticks(range(1, len(learning_rates) + 1, x_ticks_interval))
+    plt.grid(True, which='major')
     plt.title("Evolucao do Learning Rate ao longo das Epochs")
     plt.show()
 
@@ -25,20 +30,35 @@ def print_results(model_results: dict) -> None:
         fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(15,5))
 
         epochs = range(1, len(model_results['train_loss'])+1)
+
+        # Para evitar poluicao visual definde xticks para 10% dos epochs, de modo a ter 10 referencias visuais ao lonfo da curva, independente da quantidade de epochs treinadas
+        x_ticks_interval = len(model_results['train_loss']) // 10
+        x_ticks = range(1, len(model_results['train_loss'])+1, x_ticks_interval)
+        
         ax[0].scatter(epochs, model_results['train_loss'], label='Train Loss', c='blue')
         ax[0].scatter(epochs, model_results['val_loss'], label='Val Loss', c='orange')
         ax[0].set_xlabel('Epoch')
         ax[0].set_ylabel('Loss')
+        ax[0].set_xticks(x_ticks)
         ax[0].grid(True)
         ax[0].legend()
         ax[0].set_title('Loss Curves')
 
         IoU_metric = MulticlassJaccardIndex(num_classes=NUM_CLASSES, ignore_index=NUM_CLASSES-1, average='none')
         IoU_metric.plot(model_results['val_IoU'], ax=ax[1])
+        ax[1].set_xlabel('Epoch')
+        ax[1].set_ylabel('val_IoU')
+        ax[1].set_xticks(x_ticks) # Evita Poluicao Visual, visto que o val_IoU de cada classe pode ser muito diferente
+        ax[1].grid(True, which='major') # Evita Poluicao Visual, visto que o val_IoU de cada classe pode ser muito diferente
+        ax[1].legend(labels=ccs.CityscapesLables().id_names.values(), loc='lower left', ncols=2, fontsize="xx-small") # Adiciona legenda com o nome de cada classe, para facilitar a interpretacao das curvas de IoU de cada classe
         ax[1].set_title('IoU Curves')
 
         iIoU_metric = MulticlassJaccardIndex(num_classes=NUM_CLASSES, ignore_index=NUM_CLASSES-1, average='weighted')
         iIoU_metric.plot(model_results['val_iIoU'], ax=ax[2])
+        ax[2].set_xlabel('Epoch')
+        ax[2].set_ylabel('val_iIoU')
+        ax[2].set_xticks(x_ticks) # Evita Poluicao Visual, visto que o val_IoU de cada classe pode ser muito diferente
+        ax[2].grid(True, which='major') # Evita Poluicao Visual, visto que o val_IoU de cada classe pode ser muito diferente
         ax[2].set_title('iIoU Curve')
 
         plt.show()
@@ -98,10 +118,10 @@ def img_show(imgs: list[torch.Tensor], smnts1: list[torch.Tensor], smnts2: list[
         # 3. Imprime a imagem e as segmentações
         axes[i, 0].imshow(img_to_show.permute(1,2,0)) # permute para mudar a ordem dos canais e converter um tensor para imagem
         axes[i, 0].axis('off')
-        axes[i, 1].imshow(smnts1[i], cmap=cmap)
+        axes[i, 1].imshow(smnts1[i], cmap=cmap, vmin=0, vmax=NUM_CLASSES-1) # vmin e vmax para garantir que a segmentacao seja mostrada com as mesmas cores, independente da quantidade de classes presentes em cada segmentacao
         axes[i, 1].axis('off')
         if smnts2 is not None:
-            axes[i, 2].imshow(smnts2[i], cmap=cmap)
+            axes[i, 2].imshow(smnts2[i], cmap=cmap, vmin=0, vmax=NUM_CLASSES-1)
             axes[i, 2].axis('off')
     plt.show()
 
