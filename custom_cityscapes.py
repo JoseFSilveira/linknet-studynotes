@@ -138,22 +138,20 @@ class AugmentedCityscapes(datasets.Cityscapes):
     def __init__(self, *args, data_augmentation=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.data_augmentation = data_augmentation
+        self.normalize = v2.Compose([
+                v2.ToDtype(torch.float32, scale=True), # normaliza para [0,1]
+                v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) # Requisito para o backbone ResNet18, conforme mostrado no notebook principal
+            ])
 
     def __getitem__(self, index: int):
         image, target = super().__getitem__(index)
 
         # Aplicar data augmentation se estiver definido
-        if self.data_augmentation:
+        if self.data_augmentation is not None:
 
             # tv_tensors informama ao v2 que o 'image' é uma Imagem e 'target' é uma Mascara.
             # Isso garante que rotacoes/flips sejam aplicados em ambos,
             # e que ajustes de cor (se houver) sejam aplicados APENAS na imagem.
             image, target = self.data_augmentation(tv_tensors.Image(image), tv_tensors.Mask(target))
-
-        if self.split == 'train':
-            normalize = v2.Compose([
-                v2.ToDtype(torch.float32, scale=True), # normaliza para [0,1]
-                v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) # Requisito para o backbone ResNet18, conforme mostrado no notebook principal
-            ])
             
-        return normalize(image), target
+        return self.normalize(image), target

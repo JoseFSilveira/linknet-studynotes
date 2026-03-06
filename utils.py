@@ -21,13 +21,35 @@ def plot_leaning_rate_evolution(learning_rates: list[float]) -> None:
     plt.title("Evolucao do Learning Rate ao longo das Epochs")
     plt.show()
 
-def print_results(model_results: dict) -> None:
+
+def get_best_results(results: dict, IoU_lables: list=None, train_metrics: bool=False) -> dict:
+    best_results = {}
+    for metric_name, results in results.items():
+        if train_metrics or metric_name.startswith('val_'):
+            results_raw = results[-1] # Pega o valor da metrica na ultima epoca de treinamento, que corresponde ao melhor modelo salvo.
+
+            if metric_name == 'val_IoU':
+                results_items = list(results_raw) # Pega os valores do IoU de cada classe na ultima epoca de treinamento, e converte para numero real com
+                if IoU_lables is not None:
+                    results_final = {IoU_lables[i]: value.item() for i, value in enumerate(results_items)} # Mapeia os valores do IoU de cada classe para o nome da classe correspondente, usando o dicionário de mapeamento de ids para nomes de classes
+                else:
+                    results_final = {f'class_{i}': value.item() for i, value in enumerate(results_items)} # Se o dicionario de mapeamento de ids para nomes de classes não for fornecido
+
+
+            else:
+                results_final = float(results_raw) # Converte o valor da metrica para numero real com .item() caso nao seja IoU, que possui apenas um numero a representando
+                
+            best_results[metric_name] = results_final
+    return best_results
+
+
+def print_results(model_results: dict, metrics: dict) -> None:
 
     if model_results is not None:
         
         # Gerar Figuras
         plt.figure(figsize=(5,5))
-        fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(15,5))
+        fig, ax = plt.subplots(nrows=1, ncols=len(metrics)+1, figsize=(15,5))
 
         epochs = range(1, len(model_results['train_loss'])+1)
 
@@ -35,6 +57,7 @@ def print_results(model_results: dict) -> None:
         x_ticks_interval = len(model_results['train_loss']) // 10
         x_ticks = range(1, len(model_results['train_loss'])+1, x_ticks_interval)
         
+        # Plotar as curvas de perda de treino e validacao no primeiro subplot
         ax[0].scatter(epochs, model_results['train_loss'], label='Train Loss', c='blue')
         ax[0].scatter(epochs, model_results['val_loss'], label='Val Loss', c='orange')
         ax[0].set_xlabel('Epoch')
@@ -44,22 +67,16 @@ def print_results(model_results: dict) -> None:
         ax[0].legend()
         ax[0].set_title('Loss Curves')
 
-        IoU_metric = MulticlassJaccardIndex(num_classes=NUM_CLASSES, ignore_index=NUM_CLASSES-1, average='none')
-        IoU_metric.plot(model_results['val_IoU'], ax=ax[1])
-        ax[1].set_xlabel('Epoch')
-        ax[1].set_ylabel('val_IoU')
-        ax[1].set_xticks(x_ticks) # Evita Poluicao Visual, visto que o val_IoU de cada classe pode ser muito diferente
-        ax[1].grid(True, which='major') # Evita Poluicao Visual, visto que o val_IoU de cada classe pode ser muito diferente
-        ax[1].legend(labels=ccs.CityscapesLables().id_names.values(), loc='lower left', ncols=2, fontsize="xx-small") # Adiciona legenda com o nome de cada classe, para facilitar a interpretacao das curvas de IoU de cada classe
-        ax[1].set_title('IoU Curves')
-
-        iIoU_metric = MulticlassJaccardIndex(num_classes=NUM_CLASSES, ignore_index=NUM_CLASSES-1, average='weighted')
-        iIoU_metric.plot(model_results['val_iIoU'], ax=ax[2])
-        ax[2].set_xlabel('Epoch')
-        ax[2].set_ylabel('val_iIoU')
-        ax[2].set_xticks(x_ticks) # Evita Poluicao Visual, visto que o val_IoU de cada classe pode ser muito diferente
-        ax[2].grid(True, which='major') # Evita Poluicao Visual, visto que o val_IoU de cada classe pode ser muito diferente
-        ax[2].set_title('iIoU Curve')
+        # Plotar as curvas de cada metrica de validacao nos subplots seguintes
+        for i, (metric_name, metric_fn) in enumerate(metrics.items()):
+            metric_fn.plot(model_results[f'val_{metric_name}'], ax=ax[i+1])
+            ax[i+1].set_xlabel('Epoch')
+            ax[i+1].set_ylabel(f'val_{metric_name}')
+            ax[i+1].set_xticks(x_ticks) # Evita Poluicao Visual
+            ax[i+1].grid(True, which='major') # Evita Poluicao Visual
+            if metric_name == 'IoU':
+                ax[i+1].legend(labels=ccs.CityscapesLables().id_names.values(), loc='lower left', ncols=2, fontsize="xx-small") # Adiciona legenda com o nome de cada classe, para facilitar a interpretacao das curvas de IoU de cada classe
+            ax[i+1].set_title(f'{metric_name} Curves')
 
         plt.show()
 
